@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Comparador Facial</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        input[type="file"], button { margin: 15px 0; display: block; width: 100%; box-sizing: border-box; }
+        button { padding: 12px; background: #ea1d2c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #b01520; }
+        #result { margin-top: 20px; font-weight: bold; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Autenticação Facial</h2>
+        <label>Foto do Documento/Cadastro:</label>
+        <input type="file" id="image1" accept="image/*">
+        
+        <label>Selfie Agora:</label>
+        <input type="file" id="image2" accept="image/*">
+        
+        <button onclick="compareImages()">Verificar Identidade</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function compareImages() {
+            const img1 = document.getElementById('image1').files[0];
+            const img2 = document.getElementById('image2').files[0];
+            const resultDiv = document.getElementById('result');
+
+            if (!img1 || !img2) {
+                resultDiv.innerText = "Por favor, selecione as duas imagens.";
+                resultDiv.style.color = "black";
+                return;
+            }
+
+            resultDiv.innerText = "Analisando rostos... aguarde.";
+            resultDiv.style.color = "blue";
+
+            // Prepara os dados para enviar como um formulário virtual
+            const formData = new FormData();
+            formData.append('image1', img1);
+            formData.append('image2', img2);
+
+            try {
+                // Dispara a requisição para o Python
+                const response = await fetch('http://127.0.0.1:5000/compare', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+
+                if (data.error) {
+                    resultDiv.innerText = data.error;
+                    resultDiv.style.color = "red";
+                } else {
+                    // Calcula a porcentagem de similaridade
+                    const similarity = ((1 - data.distance) * 100).toFixed(2);
+                    
+                    if (data.match) {
+                        resultDiv.innerText = `Acesso Liberado! Mesma pessoa.\n(Similaridade: ${similarity}%)`;
+                        resultDiv.style.color = "green";
+                    } else {
+                        resultDiv.innerText = `Acesso Negado! Pessoas diferentes.\n(Similaridade: ${similarity}%)`;
+                        resultDiv.style.color = "red";
+                    }
+                }
+            } catch (error) {
+                resultDiv.innerText = "Erro ao conectar com o servidor Python. Ele está rodando?";
+                resultDiv.style.color = "red";
+            }
+        }
+    </script>
+</body>
+</html>
